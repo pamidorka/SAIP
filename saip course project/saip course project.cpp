@@ -15,11 +15,11 @@ struct List {
 	List* next;
 };
 
-List* CreateListFromDataBase(FILE* base, int base_size) {
+List* CreateListFromDataBase(FILE* base, unsigned int base_size) {
 	List* head = new List;
 	List* temp = head;
 
-	for (int i = 0; i < base_size - 1; i++) {
+	for (unsigned int i = 0; i < base_size - 1; i++) {
 		temp->data = new Note;
 		fread((Note*)temp->data, sizeof(Note), 1, base);
 
@@ -35,9 +35,12 @@ List* CreateListFromDataBase(FILE* base, int base_size) {
 }
 
 void PrintDataBaseFromList(List* head) {
+	system("cls");
 	bool output_data = true;
 	List* temp = head;
 	int number_of_note = 0;
+
+	if (!temp) return;
 
 	while (output_data) {
 		for (int i = 0; i < 20; i++, number_of_note++) {
@@ -62,7 +65,7 @@ void PrintDataBaseFromList(List* head) {
 
 }
 
-static struct Body {
+struct Body {
 	List* head;
 	List* tail;
 };
@@ -70,7 +73,6 @@ static struct Body {
 void DigitalSort(List*& head) {
 	List* point;
 	Body queues[256];
-	char* house_num_ptr;
 	unsigned int street_bytes = 3;
 	unsigned int house_num_bytes = 2;
 	unsigned int length = street_bytes + house_num_bytes;
@@ -86,7 +88,7 @@ void DigitalSort(List*& head) {
 				queue_num = *((char*)&(head->data->house_number) + j);
 			}
 			else if (j < length) {
-				queue_num = 255 - abs(head->data->street[j - house_num_bytes]);
+				queue_num = head->data->street[(street_bytes - 1) - (j - house_num_bytes)] + 128;
 			}
 
 			point = queues[queue_num].tail;
@@ -121,7 +123,49 @@ void DigitalSort(List*& head) {
 	}
 }
 
+List** CreateIndexArray(List* root, unsigned int size) {
+	List** arr = new List* [size];
+	List* tmp = root;
+
+	for (unsigned int i = 0; (i < size) && tmp->next->next; i++) {
+		arr[i] = tmp;
+		tmp = tmp->next;
+	}
+
+	return arr;
+}
+
+List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
+	int left = 0;
+	int right = size - 1;
+
+	while (left < right) {
+		int m = (left + right) / 2;
+		if (strncmp(index_arr[m]->data->street, element, 3) < 0) left = m + 1;
+		else right = m;
+	}
+
+	if (!strncmp(index_arr[right]->data->street, element, 3)) {
+		List* root = new List;
+		List* temp = root;
+		temp->data = new Note;
+		(*temp->data) = (*index_arr[right]->data);
+		for (unsigned int i = right + 1; i < size && index_arr[i]->data && !strncmp(index_arr[i]->data->street, element, 3); i++) {
+			temp->next = new List;
+			temp = temp->next;
+			temp->data = new Note;
+			*(temp->data) = *(index_arr[i]->data);
+			temp->next = NULL;
+		}
+		return root;
+	}
+	return nullptr;
+}
+
 int main() {
+	//setlocale(LC_ALL, "ru");
+	//std::cout << (int)'À' << ' ' << (int)'Á' << ' ' << (int)'Î' << ' ' << (int)'Ã';
+
 	FILE* base;
 	const unsigned int kData_base_size = 4000;
 
@@ -133,9 +177,17 @@ int main() {
 
 	List* head = CreateListFromDataBase(base, kData_base_size);
 
+	fclose(base);
+
 	DigitalSort(head);
 	
-	PrintDataBaseFromList(head);
+	char element[18];
+	std::cin >> element;
+	List** index_array_list = CreateIndexArray(head, kData_base_size);
+	List* elements = BinarySearch(index_array_list, element, kData_base_size);
+	PrintDataBaseFromList(elements);
+
+	//PrintDataBaseFromList(head);
 
 	exit(EXIT_SUCCESS);
 }
