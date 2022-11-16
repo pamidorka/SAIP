@@ -1,6 +1,11 @@
+
+#ifndef linux
 #pragma warning(disable : 4996)
+#endif
 
 #include <iostream>
+
+#include <string.h>
 
 struct Note {
 	char full_name[32];
@@ -35,7 +40,11 @@ List* CreateListFromDataBase(FILE* base, unsigned int base_size) {
 }
 
 void PrintDataBaseFromList(List* head) {
+#ifdef linux
+	system("clear");
+#else
 	system("cls");
+#endif
 	bool output_data = true;
 	List* temp = head;
 	int number_of_note = 0;
@@ -60,7 +69,11 @@ void PrintDataBaseFromList(List* head) {
 
 		std::cout << "print next page? 1 or 0" << std::endl;
 		std::cin >> output_data;
+#ifdef linux
+		system("clear");
+#else
 		system("cls");
+#endif
 	}
 
 }
@@ -164,7 +177,7 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 
 int main() {
 	//setlocale(LC_ALL, "ru");
-	//std::cout << (int)'À' << ' ' << (int)'Á' << ' ' << (int)'Î' << ' ' << (int)'Ã';
+	//std::cout << (int)'ï¿½' << ' ' << (int)'ï¿½' << ' ' << (int)'ï¿½' << ' ' << (int)'ï¿½';
 
 	FILE* base;
 	const unsigned int kData_base_size = 4000;
