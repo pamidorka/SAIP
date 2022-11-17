@@ -140,7 +140,7 @@ List** CreateIndexArray(List* root, unsigned int size) {
 	List** arr = new List* [size];
 	List* tmp = root;
 
-	for (unsigned int i = 0; (i < size) && tmp->next->next; i++) {
+	for (unsigned int i = 0; (i < size) && tmp; i++) {
 		arr[i] = tmp;
 		tmp = tmp->next;
 	}
@@ -154,7 +154,7 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 
 	while (left < right) {
 		int m = (left + right) / 2;
-		if (strncmp(index_arr[m]->data->street, element, 3) < 0) left = m + 1;
+		if (strncmp(index_arr[m]->data->street, element, 3) < 0) left = m + 1; // segmentation fault in the linux; 3 notes is lost in index arr; fixed.;
 		else right = m;
 	}
 
@@ -175,7 +175,7 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 	return nullptr;
 }
 
-int main() {
+int main() { // Возможно наебнулась база данных
 	//setlocale(LC_ALL, "ru");
 	//std::cout << (int)'�' << ' ' << (int)'�' << ' ' << (int)'�' << ' ' << (int)'�';
 
