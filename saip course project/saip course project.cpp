@@ -1,4 +1,25 @@
 
+/*
+
+
+
+	WARNING!!!
+
+	WHILE YOU DON'T LOOKED THE CODE, PLEASE READ THIS WARNING
+
+	This code was written for the university;
+	I did not set goals to write a competent and understandable code;
+	If you want to look at more literal code please look at my other repositories;
+
+	But if you want to look at my knowledge of algorithms then keep watching this code :)
+
+
+
+*/
+
+
+
+
 #ifndef linux
 #pragma warning(disable : 4996)
 #endif
@@ -11,7 +32,7 @@ struct Note {
 	char full_name[32];
 	char street[18];
 	short int house_number;
-	short int apartament_number;
+	short int apartment_number;
 	char date[10];
 };
 
@@ -39,42 +60,33 @@ List* CreateListFromDataBase(FILE* base, unsigned int base_size) {
 	return head;
 }
 
-void PrintDataBaseFromList(List* head) {
+void PrintNote(Note note, std::uint32_t idx) {
+	std::cout << idx + 1 << ") "
+		<< note.full_name << "\t"
+		<< note.street << "\t"
+		<< note.house_number << "\t"
+		<< note.apartment_number << "\t"
+		<< note.date << std::endl;
+}
+
+void PrintList(List* head) {
+	if (!head) {
+		return;
+	}
+
 #ifdef linux
 	system("clear");
 #else
 	system("cls");
 #endif
-	bool output_data = true;
 	List* temp = head;
 	int number_of_note = 0;
 
-	if (!temp) return;
-
-	while (output_data) {
-		for (int i = 0; i < 20; i++, number_of_note++) {
-			std::cout << number_of_note + 1 << ") " 
-				<< temp->data->full_name << "\t" 
-				<< temp->data->street << "\t" 
-				<< temp->data->house_number << "\t" 
-				<< temp->data->apartament_number << "\t" 
-				<< temp->data->date << std::endl;
-
-			if (temp->next == NULL) {
-				return;
-			}
-
-			temp = temp->next;
-		}
-
-		std::cout << "print next page? 1 or 0" << std::endl;
-		std::cin >> output_data;
-#ifdef linux
-		system("clear");
-#else
-		system("cls");
-#endif
-	}
+	do {
+		PrintNote(*(temp->data), number_of_note);
+		temp = temp->next;
+		number_of_note++;
+	} while (temp);
 
 }
 
@@ -175,9 +187,175 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 	return nullptr;
 }
 
-int main() { // Возможно наебнулась база данных
-	//setlocale(LC_ALL, "ru");
-	//std::cout << (int)'�' << ' ' << (int)'�' << ' ' << (int)'�' << ' ' << (int)'�';
+struct Vertex {
+	Note* data;
+	Vertex* left;
+	Vertex* right;
+	int balance;
+};
+
+void AddDBD(Note* data, Vertex*& point) {
+	static int vr = 1;
+	static int hr = 1;
+	if (!point) {
+		point = new Vertex;
+		point->data = data;
+		point->left = nullptr;
+		point->right = nullptr;
+		point->balance = 0;
+		vr = 1;
+	}
+	else if (data->apartment_number < point->data->apartment_number) {
+		AddDBD(data, point->left);
+		if (vr == 1) {
+			if (point->balance == 0) {
+				Vertex* q = point->left;
+				point->left = q->right;
+				q->right = point;
+				point = q;
+				q->balance = 1;
+				vr = 0;
+				hr = 1;
+			}
+			else {
+				point->balance = 0;
+				vr = 1;
+				hr = 0;
+			}
+		}
+		else {
+			hr = 0;
+		}
+	}
+	else if (data->apartment_number >= point->data->apartment_number) {
+		AddDBD(data, point->right);
+		if (vr == 1) {
+			point->balance = 1;
+			hr = 1;
+			vr = 0;
+		}
+		else if (hr == 1) {
+			if (point->balance == 1) {
+				Vertex* q = point->right;
+				point->balance = 0;
+				q->balance = 0;
+				point->right = q->left;
+				q->left = point;
+				point = q;
+				vr = 1;
+				hr = 0;
+			}
+			else {
+				hr = 0;
+			}
+		}
+	}
+}
+
+Vertex* CreateDBD(List* arr) {
+	Vertex* root = nullptr;
+	for (List* i = arr; i; i = i->next) {
+		AddDBD(i->data, root);
+	}
+	return root;
+}
+
+void PrintDBD(const Vertex* root, std::uint32_t number_of_note) {
+	if (root) {
+		PrintDBD(root->left, number_of_note);
+		PrintNote(*(root->data), number_of_note++);
+		PrintDBD(root->right, number_of_note);
+	}
+}
+
+void PrintIndexArr(List** arr, std::uint32_t size) {
+	for (std::uint32_t i = 0; i < size; i++) {
+		PrintNote(*(arr[i]->data), i);
+	}
+}
+
+void MemoryCleaner(List* main_data_base, List** unsorted_index_array_list, List** sorted_index_array_list) {
+
+	List* tmp;
+	for (List* i = main_data_base; i;) {
+		tmp = i->next;
+		delete i;
+		i = tmp;
+	}
+
+	delete[] unsorted_index_array_list;
+	delete[] sorted_index_array_list;
+}
+
+void RemoveDBD(Vertex* root) {
+	if (root) {
+		RemoveDBD(root->left);
+		RemoveDBD(root->right);
+		delete root;
+	}
+}
+
+int GetOption(char street_name[18]) {
+	int opt;
+	std::cout << "Select option" << std::endl
+		<< "1 - Print unsorted data base" << std::endl
+		<< "2 - Print sorted data base (Digital sort by street name and house number)" << std::endl
+		<< "3 - Print binary B-Tree by apartment number from Binary search by street name" << std::endl
+		<< "4 - Binary search by street name" << std::endl
+		<< "5 - Print coding (not implemented)" << std::endl
+		<< "Other key is exit from the program" << std::endl;
+	opt = getchar();
+#ifdef linux
+	system("clear");
+#else
+	system("cls");
+#endif
+
+	if (opt == '3' || opt == '4') {
+		std::cout << "Enter the street name you are looking for" << std::endl;
+		std::cin >> street_name;
+	}
+
+	return opt;
+}
+
+void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, std::uint32_t base_size) {
+		
+	char street_name[18];
+	List* elements = nullptr;
+	Vertex* tree_root = nullptr;
+
+	switch (GetOption(street_name)) {
+	case '1':
+		PrintIndexArr(unsorted_index_array_list, base_size);
+		break;
+	case '2':
+		PrintIndexArr(sorted_index_array_list, base_size);
+		break;
+	case '3':
+		if (!elements) {
+			elements = BinarySearch(sorted_index_array_list, street_name, base_size);
+		}
+		tree_root = CreateDBD(elements);
+		PrintDBD(tree_root, 0);
+		break;
+	case '4':
+		elements = BinarySearch(sorted_index_array_list, street_name, base_size);
+		PrintList(elements);
+		break;
+	case '5':
+		std::cout << "Function not implemented!" << std::endl;
+		break;
+	default:
+		std::cout << "Program closed" << std::endl;
+		break;
+	}
+
+	RemoveDBD(tree_root);
+
+}
+
+int main() {
 
 	FILE* base;
 	const unsigned int kData_base_size = 4000;
@@ -192,15 +370,14 @@ int main() { // Возможно наебнулась база данных
 
 	fclose(base);
 
+	List** unsorted_index_array_list = CreateIndexArray(head, kData_base_size);
+
 	DigitalSort(head);
 	
-	char element[18];
-	std::cin >> element;
-	List** index_array_list = CreateIndexArray(head, kData_base_size);
-	List* elements = BinarySearch(index_array_list, element, kData_base_size);
-	PrintDataBaseFromList(elements);
+	List** sorted_index_array_list = CreateIndexArray(head, kData_base_size);
 
-	//PrintDataBaseFromList(head);
+	MainMenu(unsorted_index_array_list, sorted_index_array_list, kData_base_size);
 
+	MemoryCleaner(head, unsorted_index_array_list, sorted_index_array_list);
 	exit(EXIT_SUCCESS);
 }
