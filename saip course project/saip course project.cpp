@@ -194,7 +194,7 @@ struct Vertex {
 	int balance;
 };
 
-void AddDBD(Note* data, Vertex*& point) {
+void AddBBD(Note* data, Vertex*& point) {
 	static int vr = 1;
 	static int hr = 1;
 	if (!point) {
@@ -206,7 +206,7 @@ void AddDBD(Note* data, Vertex*& point) {
 		vr = 1;
 	}
 	else if (data->apartment_number < point->data->apartment_number) {
-		AddDBD(data, point->left);
+		AddBBD(data, point->left);
 		if (vr == 1) {
 			if (point->balance == 0) {
 				Vertex* q = point->left;
@@ -228,7 +228,7 @@ void AddDBD(Note* data, Vertex*& point) {
 		}
 	}
 	else if (data->apartment_number >= point->data->apartment_number) {
-		AddDBD(data, point->right);
+		AddBBD(data, point->right);
 		if (vr == 1) {
 			point->balance = 1;
 			hr = 1;
@@ -252,19 +252,19 @@ void AddDBD(Note* data, Vertex*& point) {
 	}
 }
 
-Vertex* CreateDBD(List* arr) {
+Vertex* CreateBBD(List* arr) {
 	Vertex* root = nullptr;
 	for (List* i = arr; i; i = i->next) {
-		AddDBD(i->data, root);
+		AddBBD(i->data, root);
 	}
 	return root;
 }
 
-void PrintDBD(const Vertex* root, std::uint32_t number_of_note) {
+void PrintBBD(const Vertex* root, std::uint32_t number_of_note) {
 	if (root) {
-		PrintDBD(root->left, number_of_note);
+		PrintBBD(root->left, number_of_note);
 		PrintNote(*(root->data), number_of_note++);
-		PrintDBD(root->right, number_of_note);
+		PrintBBD(root->right, number_of_note);
 	}
 }
 
@@ -287,10 +287,10 @@ void MemoryCleaner(List* main_data_base, List** unsorted_index_array_list, List*
 	delete[] sorted_index_array_list;
 }
 
-void RemoveDBD(Vertex* root) {
+void RemoveBBD(Vertex* root) {
 	if (root) {
-		RemoveDBD(root->left);
-		RemoveDBD(root->right);
+		RemoveBBD(root->left);
+		RemoveBBD(root->right);
 		delete root;
 	}
 }
@@ -336,8 +336,8 @@ void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, 
 		if (!elements) {
 			elements = BinarySearch(sorted_index_array_list, street_name, base_size);
 		}
-		tree_root = CreateDBD(elements);
-		PrintDBD(tree_root, 0);
+		tree_root = CreateBBD(elements);
+		PrintBBD(tree_root, 0);
 		break;
 	case '4':
 		elements = BinarySearch(sorted_index_array_list, street_name, base_size);
@@ -351,7 +351,7 @@ void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, 
 		break;
 	}
 
-	RemoveDBD(tree_root);
+	RemoveBBD(tree_root);
 
 }
 
