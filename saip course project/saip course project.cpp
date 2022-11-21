@@ -184,6 +184,7 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 		}
 		return root;
 	}
+	std::cout << "Not found" << std::endl;
 	return nullptr;
 }
 
@@ -333,9 +334,7 @@ void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, 
 		PrintIndexArr(sorted_index_array_list, base_size);
 		break;
 	case '3':
-		if (!elements) {
-			elements = BinarySearch(sorted_index_array_list, street_name, base_size);
-		}
+		elements = BinarySearch(sorted_index_array_list, street_name, base_size);
 		tree_root = CreateBBD(elements);
 		PrintBBD(tree_root, 0);
 		break;
