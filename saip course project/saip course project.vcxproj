@@ -141,7 +141,6 @@
   <ItemGroup>
     <ClCompile Include="bitmap_edit.cpp" />
     <ClCompile Include="bitmap_init.cpp" />
-    <ClCompile Include="bitmap_reset.cpp" />
     <ClCompile Include="saip course project.cpp" />
   </ItemGroup>
   <ItemGroup>

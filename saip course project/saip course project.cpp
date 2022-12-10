@@ -43,6 +43,7 @@ struct Table {
 	double chance;
 	double cumul_chance;
 	std::uint32_t length;
+	bitmap* code;
 };
 
 List* CreateListFromDataBase(FILE* base, unsigned int base_size) {
@@ -200,7 +201,7 @@ void AddBBT(Note* data, Vertex<Note>*& point) {
 	}
 	else if (data->apartment_number < point->data->apartment_number) {
 		AddBBT(data, point->left);
-		if (vr == true) {
+		if (vr) {
 			if (!point->balance) {
 				Vertex<Note>* q = point->left;
 				point->left = q->right;
@@ -222,12 +223,12 @@ void AddBBT(Note* data, Vertex<Note>*& point) {
 	}
 	else if (data->apartment_number >= point->data->apartment_number) {
 		AddBBT(data, point->right);
-		if (vr == true) {
+		if (vr) {
 			point->balance = true;
 			hr = true;
 			vr = false;
 		}
-		else if (hr == true) {
+		else if (hr) {
 			if (point->balance) {
 				Vertex<Note>* q = point->right;
 				point->balance = false;
@@ -258,7 +259,7 @@ void AddBBT(Table* data, Vertex<Table>*& point) {
 	}
 	else if (data->data < point->data->data) {
 		AddBBT(data, point->left);
-		if (vr == true) {
+		if (vr) {
 			if (!point->balance) {
 				Vertex<Table>* q = point->left;
 				point->left = q->right;
@@ -280,12 +281,12 @@ void AddBBT(Table* data, Vertex<Table>*& point) {
 	}
 	else if (data->data >= point->data->data) {
 		AddBBT(data, point->right);
-		if (vr == true) {
+		if (vr) {
 			point->balance = true;
 			hr = true;
 			vr = false;
 		}
-		else if (hr == true) {
+		else if (hr) {
 			if (point->balance) {
 				Vertex<Table>* q = point->right;
 				point->balance = false;
@@ -319,6 +320,21 @@ void PrintBBT(const Vertex<Note>* root, std::uint32_t number_of_note) {
 	}
 }
 
+Note* SearchBBT(Vertex<Note>* root, short int apartment_number) {
+	if (!root) {
+		return nullptr;
+	}
+	if (apartment_number < root->data->apartment_number) {
+		return SearchBBT(root->left, apartment_number);
+	}
+	else if (apartment_number > root->data->apartment_number) {
+		return SearchBBT(root->right, apartment_number);
+	}
+	else {
+		return root->data;
+	}
+}
+
 Table* SearchBBT(Vertex<Table>* root, char sym) {
 	if (!root) {
 		return nullptr;
@@ -340,19 +356,6 @@ void PrintIndexArr(List** arr, std::uint32_t size) {
 	}
 }
 
-void MemoryCleaner(List* main_data_base, List** unsorted_index_array_list, List** sorted_index_array_list) {
-
-	List* tmp;
-	for (List* i = main_data_base; i;) {
-		tmp = i->next;
-		delete i;
-		i = tmp;
-	}
-
-	delete[] unsorted_index_array_list;
-	delete[] sorted_index_array_list;
-}
-
 void RemoveBBT(Vertex<Note>* root) {
 	if (root) {
 		RemoveBBT(root->left);
@@ -365,6 +368,7 @@ void RemoveBBT(Vertex<Table>* root) {
 	if (root) {
 		RemoveBBT(root->left);
 		RemoveBBT(root->right);
+		bitmap_destroy(&root->data->code);
 		delete root;
 	}
 }
@@ -407,7 +411,6 @@ void GilberMurCode(List** base, std::uint32_t base_size, std::fstream& output) {
 
 	std::uint32_t symbols_in_base = sizeof(Note) * base_size;
 	Vertex<Table>* root = nullptr;
-	bitmap* word = bitmap_init(0);
 
 	double cumul_chance = 0;
 	for (std::uint32_t j = 0; j < base_size; j++) {
@@ -419,6 +422,10 @@ void GilberMurCode(List** base, std::uint32_t base_size, std::fstream& output) {
 				temp->chance = (double)NumInBase(base, base_size, *(data_pointer + i)) / (double)symbols_in_base;
 				temp->cumul_chance = cumul_chance + temp->chance / (double)2;
 				temp->length = (std::uint32_t)std::ceil(-std::log(temp->chance)) + 1;
+				temp->code = bitmap_init(temp->length);
+				for (std::uint64_t k = 0; k < temp->length; k++) {
+					bitmap_set_nth_bit(temp->code, temp->length - k - 1, *((int*)(&temp->cumul_chance)) >> k & 1);
+				}
 				AddBBT(temp, root);
 			}
 		}
@@ -432,12 +439,7 @@ void GilberMurCode(List** base, std::uint32_t base_size, std::fstream& output) {
 				std::cout << "GilberMurCode() error: Symbol unregister" << std::endl;
 				continue;
 			}
-			bitmap_resize(word, table->length);
-			for (std::uint64_t k = 0; k < table->length; k++) {
-				bitmap_set_nth_bit(word, table->length - k - 1, *((int*)(&table->cumul_chance)) >> k & 1);
-			}
-			output.write((char*)word->data, word->capacity);
-			bitmap_reset(word);
+			output.write((char*)table->code->data, table->code->capacity);
 		}
 	}
 
@@ -445,18 +447,18 @@ void GilberMurCode(List** base, std::uint32_t base_size, std::fstream& output) {
 	std::cout << "Entropy " << -GetEntropy(root) << std::endl;
 	std::cout << "Avg Length " << GetAvgLength(root) << std::endl;
 
-	bitmap_destroy(&word);
 	RemoveBBT(root);
 }
 
-int GetOption(char street_name[18]) {
+int GetOption(char street_name[18], short int& apart) {
 	int opt;
 	std::cout << "Select option" << std::endl
 		<< "1 - Print unsorted data base" << std::endl
 		<< "2 - Print sorted data base (Digital sort by street name and house number)" << std::endl
 		<< "3 - Print binary B-Tree by apartment number from Binary search by street name" << std::endl
 		<< "4 - Binary search by street name" << std::endl
-		<< "5 - Print coding (not implemented)" << std::endl
+		<< "5 - Create code (Gilbert-Mur)" << std::endl
+		<< "6 - Serach in B-Tree by apartment number from Binary search by street name" << std::endl
 		<< "Other key is exit from the program" << std::endl;
 	opt = getchar();
 #ifdef linux
@@ -465,9 +467,16 @@ int GetOption(char street_name[18]) {
 	system("cls");
 #endif
 
-	if (opt == '3' || opt == '4') {
-		std::cout << "Enter the street name you are looking for" << std::endl;
+	if (opt == '3' || opt == '4' || opt == '6') {
+		if (opt == '3' || opt == '6') {
+			std::cout << "B-Tree creating..." << std::endl;
+		}
+		std::cout << "Enter the name of the street you want to find" << std::endl;
 		std::cin >> street_name;
+		if (opt == '6') {
+			std::cout << "Enter the number of the apartment you want to find" << std::endl;
+			std::cin >> apart;
+		}
 	}
 
 	return opt;
@@ -476,11 +485,11 @@ int GetOption(char street_name[18]) {
 void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, std::uint32_t base_size) {
 		
 	char street_name[18];
-	List* elements = nullptr;
+	short apart_num;
 	Vertex<Note>* tree_root = nullptr;
 	std::fstream out("./output.gm");
 
-	switch (GetOption(street_name)) {
+	switch (GetOption(street_name, apart_num)) {
 	case '1':
 		PrintIndexArr(unsorted_index_array_list, base_size);
 		break;
@@ -488,18 +497,17 @@ void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, 
 		PrintIndexArr(sorted_index_array_list, base_size);
 		break;
 	case '3':
-		if (!elements) {
-			elements = BinarySearch(sorted_index_array_list, street_name, base_size);
-		}
-		tree_root = CreateBBT(elements);
+		tree_root = CreateBBT(BinarySearch(sorted_index_array_list, street_name, base_size));
 		PrintBBT(tree_root, 0);
 		break;
 	case '4':
-		elements = BinarySearch(sorted_index_array_list, street_name, base_size);
-		PrintList(elements);
+		PrintList(BinarySearch(sorted_index_array_list, street_name, base_size));
 		break;
 	case '5':
 		GilberMurCode(unsorted_index_array_list, base_size, out);
+		break;
+	case '6': 
+		PrintNote(*SearchBBT(CreateBBT(BinarySearch(sorted_index_array_list, street_name, base_size)), apart_num), 0);
 		break;
 	default:
 		std::cout << "Program closed" << std::endl;
@@ -508,7 +516,19 @@ void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, 
 
 	out.close();
 	RemoveBBT(tree_root);
+}
 
+void MemoryCleaner(List* main_data_base, List** unsorted_index_array_list, List** sorted_index_array_list) {
+
+	List* tmp;
+	for (List* i = main_data_base; i;) {
+		tmp = i->next;
+		delete i;
+		i = tmp;
+	}
+
+	delete[] unsorted_index_array_list;
+	delete[] sorted_index_array_list;
 }
 
 int main() {

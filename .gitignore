@@ -368,7 +368,6 @@ bitmap.h
 bitmap_private.h
 bitmap_edit.cpp
 bitmap_init.cpp
-bitmap_reset.cpp
 
 # Linux
 *.o
