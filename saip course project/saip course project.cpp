@@ -4,8 +4,13 @@
 #endif
 
 #include <iostream>
+#include <fstream>
+#include <cmath>
+#include <cstring>
+#include <exception>
 
-#include <string.h>
+#include "bitmap_private.h"
+#include "bitmap.h"
 
 struct Note {
 	char full_name[32];
@@ -20,8 +25,9 @@ struct List {
 	List* next;
 };
 
+template <class type>
 struct Vertex {
-	Note* data;
+	type* data;
 	Vertex* left;
 	Vertex* right;
 	bool balance;
@@ -30,6 +36,13 @@ struct Vertex {
 struct QBody {
 	List* head;
 	List* tail;
+};
+
+struct Table {
+	char data;
+	double chance;
+	double cumul_chance;
+	std::uint32_t length;
 };
 
 List* CreateListFromDataBase(FILE* base, unsigned int base_size) {
@@ -152,16 +165,16 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 
 	while (left < right) {
 		int m = (left + right) / 2;
-		if (strncmp(index_arr[m]->data->street, element, 3) < 0) left = m + 1; 
+		if (std::strncmp(index_arr[m]->data->street, element, 3) < 0) left = m + 1;
 		else right = m;
 	}
 
-	if (!strncmp(index_arr[right]->data->street, element, 3)) {
+	if (!std::strncmp(index_arr[right]->data->street, element, 3)) {
 		List* root = new List;
 		List* temp = root;
 		temp->data = new Note;
 		(*temp->data) = (*index_arr[right]->data);
-		for (unsigned int i = right + 1; i < size && index_arr[i]->data && !strncmp(index_arr[i]->data->street, element, 3); i++) {
+		for (unsigned int i = right + 1; i < size && index_arr[i]->data && !std::strncmp(index_arr[i]->data->street, element, 3); i++) {
 			temp->next = new List;
 			temp = temp->next;
 			temp->data = new Note;
@@ -174,11 +187,11 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 	return nullptr;
 }
 
-void AddBBT(Note* data, Vertex*& point) {
+void AddBBT(Note* data, Vertex<Note>*& point) {
 	static bool vr = true;
 	static bool hr = true;
 	if (!point) {
-		point = new Vertex;
+		point = new Vertex<Note>;
 		point->data = data;
 		point->left = nullptr;
 		point->right = nullptr;
@@ -189,7 +202,7 @@ void AddBBT(Note* data, Vertex*& point) {
 		AddBBT(data, point->left);
 		if (vr == true) {
 			if (!point->balance) {
-				Vertex* q = point->left;
+				Vertex<Note>* q = point->left;
 				point->left = q->right;
 				q->right = point;
 				point = q;
@@ -216,7 +229,7 @@ void AddBBT(Note* data, Vertex*& point) {
 		}
 		else if (hr == true) {
 			if (point->balance) {
-				Vertex* q = point->right;
+				Vertex<Note>* q = point->right;
 				point->balance = false;
 				q->balance = false;
 				point->right = q->left;
@@ -232,19 +245,92 @@ void AddBBT(Note* data, Vertex*& point) {
 	}
 }
 
-Vertex* CreateBBT(List* arr) {
-	Vertex* root = nullptr;
+void AddBBT(Table* data, Vertex<Table>*& point) {
+	static bool vr = true;
+	static bool hr = true;
+	if (!point) {
+		point = new Vertex<Table>;
+		point->data = data;
+		point->left = nullptr;
+		point->right = nullptr;
+		point->balance = false;
+		vr = true;
+	}
+	else if (data->data < point->data->data) {
+		AddBBT(data, point->left);
+		if (vr == true) {
+			if (!point->balance) {
+				Vertex<Table>* q = point->left;
+				point->left = q->right;
+				q->right = point;
+				point = q;
+				q->balance = true;
+				vr = false;
+				hr = true;
+			}
+			else {
+				point->balance = false;
+				vr = true;
+				hr = false;
+			}
+		}
+		else {
+			hr = false;
+		}
+	}
+	else if (data->data >= point->data->data) {
+		AddBBT(data, point->right);
+		if (vr == true) {
+			point->balance = true;
+			hr = true;
+			vr = false;
+		}
+		else if (hr == true) {
+			if (point->balance) {
+				Vertex<Table>* q = point->right;
+				point->balance = false;
+				q->balance = false;
+				point->right = q->left;
+				q->left = point;
+				point = q;
+				vr = true;
+				hr = false;
+			}
+			else {
+				hr = false;
+			}
+		}
+	}
+}
+
+Vertex<Note>* CreateBBT(List* arr) {
+	Vertex<Note>* root = nullptr;
 	for (List* i = arr; i; i = i->next) {
 		AddBBT(i->data, root);
 	}
 	return root;
 }
 
-void PrintBBD(const Vertex* root, std::uint32_t number_of_note) {
+void PrintBBT(const Vertex<Note>* root, std::uint32_t number_of_note) {
 	if (root) {
-		PrintBBD(root->left, number_of_note);
+		PrintBBT(root->left, number_of_note);
 		PrintNote(*(root->data), number_of_note++);
-		PrintBBD(root->right, number_of_note);
+		PrintBBT(root->right, number_of_note);
+	}
+}
+
+Table* SearchBBT(Vertex<Table>* root, char sym) {
+	if (!root) {
+		return nullptr;
+	}
+	if (sym < root->data->data) {
+		return SearchBBT(root->left, sym);
+	}
+	else if (sym > root->data->data) {
+		return SearchBBT(root->right, sym);
+	}
+	else {
+		return root->data;
 	}
 }
 
@@ -267,12 +353,100 @@ void MemoryCleaner(List* main_data_base, List** unsorted_index_array_list, List*
 	delete[] sorted_index_array_list;
 }
 
-void RemoveBBT(Vertex* root) {
+void RemoveBBT(Vertex<Note>* root) {
 	if (root) {
 		RemoveBBT(root->left);
 		RemoveBBT(root->right);
 		delete root;
 	}
+}
+
+void RemoveBBT(Vertex<Table>* root) {
+	if (root) {
+		RemoveBBT(root->left);
+		RemoveBBT(root->right);
+		delete root;
+	}
+}
+
+double GetEntropy(Vertex<Table>* root) {
+	if (root) {
+		return GetEntropy(root->left) + GetEntropy(root->right) + root->data->chance * std::log(root->data->chance);
+	}
+
+	return 0;
+}
+
+double GetAvgLength(Vertex<Table>* root) {
+	if (root) {
+		return GetAvgLength(root->left) + GetAvgLength(root->right) + root->data->chance * root->data->length;
+	}
+
+	return 0;
+}
+
+std::uint32_t NumInBase(List** base, std::uint32_t base_size, char sym) {
+	std::uint32_t counter = 0;
+	for (std::uint32_t i = 0; i < base_size; i++) {
+		char* data_pointer = (char*)base[i]->data;
+		for (std::uint32_t i = 0; i < sizeof(Note); i++) {
+			if (*(data_pointer + i) == sym) {
+				counter++;
+			}
+		}
+	}
+
+	return counter;
+}
+
+void GilberMurCode(List** base, std::uint32_t base_size, std::fstream& output) {
+
+	if (!output.is_open()) {
+		throw std::runtime_error("GilberMurCode() error: file not found");
+	}
+
+	std::uint32_t symbols_in_base = sizeof(Note) * base_size;
+	Vertex<Table>* root = nullptr;
+	bitmap* word = bitmap_init(0);
+
+	double cumul_chance = 0;
+	for (std::uint32_t j = 0; j < base_size; j++) {
+		char* data_pointer = (char*)(base[j]->data);
+		for (std::uint32_t i = 0; i < sizeof(Note); i++) {
+			if (!SearchBBT(root, *(data_pointer + i))) {
+				Table* temp = new Table;
+				temp->data = *(data_pointer + i);
+				temp->chance = (double)NumInBase(base, base_size, *(data_pointer + i)) / (double)symbols_in_base;
+				temp->cumul_chance = cumul_chance + temp->chance / (double)2;
+				temp->length = (std::uint32_t)std::ceil(-std::log(temp->chance)) + 1;
+				AddBBT(temp, root);
+			}
+		}
+	}
+
+	for (std::uint32_t j = 0; j < base_size; j++) {
+		char* data_pointer = (char*)(base[j]->data);
+		for (std::uint32_t i = 0; i < sizeof(Note); i++) {
+			Table* table = SearchBBT(root, *(data_pointer + i));
+			if (!table) {
+				std::cout << "GilberMurCode() error: Symbol unregister" << std::endl;
+				continue;
+			}
+			bitmap_resize(word, table->length);
+			for (std::uint64_t k = 0; k < table->length; k++) {
+				bitmap_set_nth_bit(word, table->length - k - 1, *((int*)(&table->cumul_chance)) >> k & 1);
+			}
+			output.write((char*)word->data, word->capacity);
+			bitmap_reset(word);
+		}
+	}
+
+	std::cout.precision(5);
+	std::cout << "Entropy " << -GetEntropy(root) << std::endl;
+	std::cout << "Avg Length " << GetAvgLength(root) << std::endl;
+
+	bitmap_destroy(&word);
+	RemoveBBT(root);
 }
 
 int GetOption(char street_name[18]) {
@@ -303,7 +477,8 @@ void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, 
 		
 	char street_name[18];
 	List* elements = nullptr;
-	Vertex* tree_root = nullptr;
+	Vertex<Note>* tree_root = nullptr;
+	std::fstream out("./output.gm");
 
 	switch (GetOption(street_name)) {
 	case '1':
@@ -317,26 +492,26 @@ void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, 
 			elements = BinarySearch(sorted_index_array_list, street_name, base_size);
 		}
 		tree_root = CreateBBT(elements);
-		PrintBBD(tree_root, 0);
+		PrintBBT(tree_root, 0);
 		break;
 	case '4':
 		elements = BinarySearch(sorted_index_array_list, street_name, base_size);
 		PrintList(elements);
 		break;
 	case '5':
-		std::cout << "Function not implemented!" << std::endl;
+		GilberMurCode(unsorted_index_array_list, base_size, out);
 		break;
 	default:
 		std::cout << "Program closed" << std::endl;
 		break;
 	}
 
+	out.close();
 	RemoveBBT(tree_root);
 
 }
 
 int main() {
-
 	FILE* base;
 	const unsigned int kData_base_size = 4000;
 

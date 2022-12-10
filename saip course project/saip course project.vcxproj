@@ -139,7 +139,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bitmap_edit.cpp" />
+    <ClCompile Include="bitmap_init.cpp" />
+    <ClCompile Include="bitmap_reset.cpp" />
     <ClCompile Include="saip course project.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="bitmap.h" />
+    <ClInclude Include="bitmap_private.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="output.gm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
