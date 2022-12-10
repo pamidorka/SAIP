@@ -170,6 +170,7 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 		}
 		return root;
 	}
+	std::cout << "Not found" << std::endl;
 	return nullptr;
 }
 
