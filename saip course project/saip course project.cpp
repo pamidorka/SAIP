@@ -1,25 +1,4 @@
 
-/*
-
-
-
-	WARNING!!!
-
-	WHILE YOU DON'T LOOKED THE CODE, PLEASE READ THIS WARNING
-
-	This code was written for the university;
-	I did not set goals to write a competent and understandable code;
-	If you want to look at more literal code please look at my other repositories;
-
-	But if you want to look at my knowledge of algorithms then keep watching this code :)
-
-
-
-*/
-
-
-
-
 #ifndef linux
 #pragma warning(disable : 4996)
 #endif
@@ -39,6 +18,18 @@ struct Note {
 struct List {
 	Note* data;
 	List* next;
+};
+
+struct Vertex {
+	Note* data;
+	Vertex* left;
+	Vertex* right;
+	bool balance;
+};
+
+struct QBody {
+	List* head;
+	List* tail;
 };
 
 List* CreateListFromDataBase(FILE* base, unsigned int base_size) {
@@ -90,14 +81,9 @@ void PrintList(List* head) {
 
 }
 
-struct Body {
-	List* head;
-	List* tail;
-};
-
 void DigitalSort(List*& head) {
 	List* point;
-	Body queues[256];
+	QBody queues[256];
 	unsigned int street_bytes = 3;
 	unsigned int house_num_bytes = 2;
 	unsigned int length = street_bytes + house_num_bytes;
@@ -166,7 +152,7 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 
 	while (left < right) {
 		int m = (left + right) / 2;
-		if (strncmp(index_arr[m]->data->street, element, 3) < 0) left = m + 1; // segmentation fault in the linux; 3 notes is lost in index arr; fixed.;
+		if (strncmp(index_arr[m]->data->street, element, 3) < 0) left = m + 1; 
 		else right = m;
 	}
 
@@ -187,75 +173,68 @@ List* BinarySearch(List** index_arr, char element[18], unsigned int size) {
 	return nullptr;
 }
 
-struct Vertex {
-	Note* data;
-	Vertex* left;
-	Vertex* right;
-	int balance;
-};
-
-void AddBBD(Note* data, Vertex*& point) {
-	static int vr = 1;
-	static int hr = 1;
+void AddBBT(Note* data, Vertex*& point) {
+	static bool vr = true;
+	static bool hr = true;
 	if (!point) {
 		point = new Vertex;
 		point->data = data;
 		point->left = nullptr;
 		point->right = nullptr;
-		point->balance = 0;
-		vr = 1;
+		point->balance = false;
+		vr = true;
 	}
 	else if (data->apartment_number < point->data->apartment_number) {
-		AddBBD(data, point->left);
-		if (vr == 1) {
-			if (point->balance == 0) {
+		AddBBT(data, point->left);
+		if (vr == true) {
+			if (!point->balance) {
 				Vertex* q = point->left;
 				point->left = q->right;
 				q->right = point;
 				point = q;
-				q->balance = 1;
-				vr = 0;
-				hr = 1;
+				q->balance = true;
+				vr = false;
+				hr = true;
 			}
 			else {
-				point->balance = 0;
-				vr = 1;
-				hr = 0;
+				point->balance = false;
+				vr = true;
+				hr = false;
 			}
 		}
 		else {
-			hr = 0;
+			hr = false;
 		}
 	}
 	else if (data->apartment_number >= point->data->apartment_number) {
-		AddBBD(data, point->right);
-		if (vr == 1) {
-			point->balance = 1;
-			hr = 1;
-			vr = 0;
+		AddBBT(data, point->right);
+		if (vr == true) {
+			point->balance = true;
+			hr = true;
+			vr = false;
 		}
-		else if (hr == 1) {
-			if (point->balance == 1) {
+		else if (hr == true) {
+			if (point->balance) {
 				Vertex* q = point->right;
-				point->balance = 0;
-				q->balance = 0;
+				point->balance = false;
+				q->balance = false;
 				point->right = q->left;
 				q->left = point;
 				point = q;
-				vr = 1;
-				hr = 0;
+				vr = true;
+				hr = false;
 			}
 			else {
-				hr = 0;
+				hr = false;
 			}
 		}
 	}
 }
 
-Vertex* CreateBBD(List* arr) {
+Vertex* CreateBBT(List* arr) {
 	Vertex* root = nullptr;
 	for (List* i = arr; i; i = i->next) {
-		AddBBD(i->data, root);
+		AddBBT(i->data, root);
 	}
 	return root;
 }
@@ -287,10 +266,10 @@ void MemoryCleaner(List* main_data_base, List** unsorted_index_array_list, List*
 	delete[] sorted_index_array_list;
 }
 
-void RemoveBBD(Vertex* root) {
+void RemoveBBT(Vertex* root) {
 	if (root) {
-		RemoveBBD(root->left);
-		RemoveBBD(root->right);
+		RemoveBBT(root->left);
+		RemoveBBT(root->right);
 		delete root;
 	}
 }
@@ -336,7 +315,7 @@ void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, 
 		if (!elements) {
 			elements = BinarySearch(sorted_index_array_list, street_name, base_size);
 		}
-		tree_root = CreateBBD(elements);
+		tree_root = CreateBBT(elements);
 		PrintBBD(tree_root, 0);
 		break;
 	case '4':
@@ -351,7 +330,7 @@ void MainMenu(List** unsorted_index_array_list, List** sorted_index_array_list, 
 		break;
 	}
 
-	RemoveBBD(tree_root);
+	RemoveBBT(tree_root);
 
 }
 
